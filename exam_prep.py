@@ -578,7 +578,7 @@ class HookeAndJeeves():
                                              [north_x["x_1"],   north_x["x_2"],     EW_movement,    stepsize,   self.function.evalf(subs=north_x), -north_delta,    stepsize, '', ''],
                                              [south_x["x_1"],   south_x["x_2"],     EW_movement,    -stepsize,  self.function.evalf(subs=south_x), -south_delta,    stepsize, '', '']]),
                                    index = ['Explore right {}'.format(self.iter_num+1), 'Explore left {}'.format(self.iter_num+1), 'Explore up {}'.format(self.iter_num+1), 'Explore down {}'.format(self.iter_num+1)],
-                                   columns = ['x2', 'x3', 'delta x2', 'delta x3', 'f(x)', 'delta f(x)', 'step length', 'pattern delta x2', 'pattern delta x3']
+                                   columns = ['x_1', 'x_2', 'delta x_1', 'delta x_2', 'f(x)', 'delta f(x)', 'step length', 'pattern delta x_1', 'pattern delta x_2']
                 )
                 self.data = pd.concat([self.data, exploration_data])
                 return explore_choice
@@ -600,7 +600,7 @@ class HookeAndJeeves():
                     np.array([[self.basepoint["x_1"],    self.basepoint["x_2"], '', '', self.fx, '', '', '', ''],
                               ['', '', '', '', '', '', '', self.pattern_vector[0], self.pattern_vector[1]]]),
                     index = ['Basepoint {}'.format(self.iter_num+1), 'Pattern Move {}'.format(self.iter_num+1)],
-                    columns = ['x2', 'x3', 'delta x2', 'delta x3', 'f(x)', 'delta f(x)', 'step length', 'pattern delta x2', 'pattern delta x3']
+                    columns = ['x_1', 'x_2', 'delta x_1', 'delta x_2', 'f(x)', 'delta f(x)', 'step length', 'pattern delta x_1', 'pattern delta x_2']
                 )
                 
                 self.data = pd.concat([self.data, basepoint_data])
@@ -623,7 +623,7 @@ class HookeAndJeeves():
                 pattern_move_data = pd.DataFrame(
                     np.array([[self.basepoint["x_1"],    self.basepoint["x_2"], '', '', self.fx, '', '', '', '']]),
                     index = ['Basepoint after Pattern Move {}'.format(self.iter_num+1)],
-                    columns = ['x2', 'x3', 'delta x2', 'delta x3', 'f(x)', 'delta f(x)', 'step length', 'pattern delta x2', 'pattern delta x3']
+                    columns = ['x_1', 'x_2', 'delta x_1', 'delta x_2', 'f(x)', 'delta f(x)', 'step length', 'pattern delta x_1', 'pattern delta x_2']
                 )
                 
                 self.data = pd.concat([self.data, pattern_move_data])
