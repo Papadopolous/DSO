@@ -1,13 +1,16 @@
 #%%
-from math import floor
+from math import floor, ceil
 from IPython.display import display, Math
+from numpy.lib.function_base import vectorize
 import scipy.optimize as opt
 import numpy as np
 import numpy.linalg as linalg
 import pandas as pd
 from matplotlib import pyplot as plt
 import sympy as sym
+from sympy.core.sympify import sympify
 from sympy.plotting.plot import plot
+from sympy.utilities.lambdify import lambdify
 # from sympy.core.symbol import Symbol
 
 #%%
@@ -772,12 +775,14 @@ class ConstraintElimination():
         
         return self.f
     
-    def Newton(self, start_x, iters=5):
+    def LinearNewton(self, start_x, iters=5):
         linear_optimisation = LinearNewton(self.f, start_x, iters)
         self.data = linear_optimisation.data
         
         display(self.data)
         
+    def Newton(self, start_x, iters=5):
+        newton = Newton(self.f, start_x-start_x, iters=iters)
 # %%
 class ParetoFront():
     """Aids in finding the Pareto front for a dataset or two 1-D function
@@ -915,6 +920,123 @@ class EigenVectorWeighting():
         display(self.data) 
         
             
+        
+    
+#%%
+class InverseParabolic():
+    def __init__(self, function, x1, x2, x3, iters):
+        self.function = sym.sympify(function)
+
+        display(self.function)
+        
+        self.x1 = x1
+        self.x2 = x2
+        self.x3 = x3
+ 
+        self.iter_num = 0
+        self.iters = iters
+ 
+        self._data_array = np.empty((self.iters, 8))
+        
+        self.run()
+        
+        self.data = pd.DataFrame(self._data_array, columns=['x_1', 'x_2', 'x_3', 'f(x_1)', 'f(x_2)', 'f(x_3)', 'x*', 'f(x*)'])
+        display(self.data)
+ 
+    def _step(self):
+ 
+        x1 = self.x1
+        x2 = self.x2
+        x3 = self.x3
+ 
+        f1 = self.function.subs("x", x1).evalf()
+        f2 = self.function.subs("x", x2).evalf()
+        f3 = self.function.subs("x", x3).evalf()
+ 
+ 
+        upper = (f3-f2)*(x2**2 - x1**2) + (f1-f2)*(x3**2 - x2**2) 
+        lower = 2*((f3-f2)*(x2 - x1) + (f1-f2)*(x3 - x2))
+        x_star = upper / lower
+        f_xstar = self.function.subs("x", x_star).evalf()
+        self._data_array[self.iter_num, :] = [x1, x2, x3, f1, f2, f3, x_star, f_xstar]
+ 
+        self.x1 = floor(x_star)
+        self.x2 = x_star
+        self.x3 = ceil(x_star)
+ 
+        f1 = self.function.subs("x", self.x1).evalf()
+        f2 = self.function.subs("x", self.x2).evalf()
+        f3 = self.function.subs("x", self.x3).evalf()
+
+ 
+ 
+    def run(self):
+        for i in range(self.iters):
+            self._step()
+            self.iter_num += 1
+# %%
+class FuzzyLogic():
+    def __init__(self, obj1, obj2, membership1, membership2):
+        self.obj1 = sym.sympify(obj1)
+        self.obj2 = sym.sympify(obj2)
+        display(self.obj1)
+        display(self.obj2)
+        self.obj1 = sym.lambdify("x", self.obj1)
+        self.obj2 = sym.lambdify("x", self.obj2)
+        
+        self.membership1 = self._calc_membership_func(membership1["unacceptable"], membership1["acceptable"])
+        self.membership2 = self._calc_membership_func(membership2["unacceptable"], membership2["acceptable"])
+        
+        self._data_array = np.empty((100, 6))
+        
+        self.run()
+        
+        
+        self.data = pd.DataFrame(self._data_array, columns=['x', 'f_1(x)', 'f_2(x)', 'Membership 1', 'Membership 2', 'Combined'])
+        
+        fig, ax1 = plt.subplots()
+
+        ax1.set_xlabel('x')
+        ax1.set_ylabel(r'$f_1(x), f_2(x)$')
+        ax1.plot(self.data['x'], self.data['f_1(x)'], label=r'$f_1(x)$')
+        ax1.plot(self.data['x'], self.data['f_2(x)'], label=r'$f_2(x)$')
+        ax1.tick_params(axis='y')
+        ax1.legend()
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+        ax2.set_ylabel('Memberships')  # we already handled the x-label with ax1
+        ax2.plot(self.data['x'], self.data['Membership 1'], 'r', label='Membership 1')
+        ax2.plot(self.data['x'], self.data['Membership 2'], 'b', label='Membership 2')
+        ax2.plot(self.data['x'], self.data['Combined'], 'g', label='Combined')
+        ax2.tick_params(axis='y')
+
+        ax2.legend()
+        fig.tight_layout()  # otherwise the right y-label is slightly clipped
+        plt.show()
+        
+        # display(self.data)
+        display(self.data.iloc[self.data['Combined'].idxmax()])
+        
+    def _calc_membership_func(self, unacceptable, acceptable, unacceptable_value = 0, acceptable_value = 1):
+        m = (unacceptable_value - acceptable_value) / (unacceptable - acceptable)
+        c = acceptable_value - acceptable * m
+        def membership_function(x):
+            if x > unacceptable:
+                return unacceptable_value
+            elif x < acceptable:
+                return acceptable_value 
+            else:
+                return m * x + c
+        return membership_function
+    
+    def run(self, range=np.linspace(0.1, 3, 100)):
+        for i, x in enumerate(range):
+            f1 = self.obj1(x)
+            f2 = self.obj2(x)
+            mem1 = self.membership1(f1)
+            mem2 = self.membership2(f2)
+            combined = mem1 + mem2
+            self._data_array[i, :] = x, f1, f2, mem1, mem2, combined
             
         
 # %%
